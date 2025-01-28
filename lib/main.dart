@@ -1,6 +1,11 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:record/record.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,13 +39,19 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   late CameraController _controller;
   late FlutterTts flutterTts;
+  late Record audioRecorder;
   bool _isInitialized = false;
+  bool _isRecording = false;
+  String? _audioPath;
+  String? _imagePath;
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
     _initializeTts();
+    _initializeAudioRecorder();
+    _initializeVolumeButtonListener();
   }
 
   Future<void> _initializeCamera() async {
@@ -63,18 +74,122 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _initializeTts() async {
     flutterTts = FlutterTts();
     await flutterTts.setLanguage("pt-BR");
-    await flutterTts.setSpeechRate(0.5);
+    await flutterTts.setSpeechRate(0.9);
     await flutterTts.setPitch(1.0);
     
-    // Mensagem de boas-vindas
+    // Mensagem de boas-vindas com instruções
     await Future.delayed(const Duration(seconds: 1));
-    await flutterTts.speak("Bem-vindo ao seu assistente visual. A câmera está pronta para uso.");
+    await flutterTts.speak(
+      "Bem-vindo ao seu assistente visual. Para utilizar, aponte a câmera para o que você deseja analisar. "
+      "Pressione qualquer botão de volume para capturar uma foto e começar a gravar sua pergunta. "
+      "Pressione novamente para finalizar a gravação. Aguarde a resposta em áudio."
+    );
+  }
+
+  void _initializeAudioRecorder() {
+    audioRecorder = Record();
+  }
+
+  void _initializeVolumeButtonListener() {
+    HardwareKeyboard.instance.addHandler(_handleVolumeButton);
+  }
+
+  bool _handleVolumeButton(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.audioVolumeUp ||
+          event.logicalKey == LogicalKeyboardKey.audioVolumeDown) {
+        if (!_isRecording) {
+          _startCapture();
+        } else {
+          _stopCapture();
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _startCapture() async {
+    if (!_isRecording) {
+      // Captura a foto
+      final XFile photo = await _controller.takePicture();
+      _imagePath = photo.path;
+      
+      // Inicia a gravação
+      final tempDir = await getTemporaryDirectory();
+      _audioPath = '${tempDir.path}/audio_query.m4a';
+      
+      await audioRecorder.start(
+        path: _audioPath,
+        encoder: AudioEncoder.aacLc,
+      );
+      
+      setState(() {
+        _isRecording = true;
+      });
+      
+      await flutterTts.speak("Gravando sua pergunta");
+    }
+  }
+
+  Future<void> _stopCapture() async {
+    if (_isRecording) {
+      await audioRecorder.stop();
+      setState(() {
+        _isRecording = false;
+      });
+      
+      await flutterTts.speak("Processando sua solicitação, por favor aguarde");
+      
+      await _sendRequest();
+    }
+  }
+
+  Future<void> _sendRequest() async {
+    try {
+      // Simulando o tempo de processamento
+      await Future.delayed(const Duration(seconds: 5));
+      
+      // Código preparado para quando a API estiver pronta
+      /*
+      final uri = Uri.parse('sua_url_api/analyze-image-audio-query');
+      final request = http.MultipartRequest('POST', uri)
+        ..files.add(await http.MultipartFile.fromPath(
+          'image',
+          _imagePath!,
+        ))
+        ..files.add(await http.MultipartFile.fromPath(
+          'audio',
+          _audioPath!,
+        ));
+
+      final response = await request.send();
+      final responseData = await response.stream.bytesToString();
+      final jsonResponse = jsonDecode(responseData);
+      */
+      
+      // Mensagem simulada (remover quando a API estiver pronta)
+      await flutterTts.speak(
+        "Na imagem eu vejo uma sala bem iluminada com uma mesa de madeira e algumas cadeiras. "
+        "Há também uma janela grande que permite a entrada de luz natural."
+      );
+      
+      // Limpando os arquivos temporários
+      await File(_imagePath!).delete();
+      await File(_audioPath!).delete();
+      
+    } catch (e) {
+      await flutterTts.speak("Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.");
+      print('Error sending request: $e');
+    }
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleVolumeButton);
     _controller.dispose();
     flutterTts.stop();
+    audioRecorder.dispose();
     super.dispose();
   }
 
@@ -89,8 +204,22 @@ class _CameraScreenState extends State<CameraScreen> {
     }
 
     return Scaffold(
-      body: SizedBox.expand(
-        child: CameraPreview(_controller),
+      body: Stack(
+        children: [
+          SizedBox.expand(
+            child: CameraPreview(_controller),
+          ),
+          if (_isRecording)
+            const Positioned(
+              top: 50,
+              right: 20,
+              child: Icon(
+                Icons.mic,
+                color: Colors.red,
+                size: 30,
+              ),
+            ),
+        ],
       ),
     );
   }

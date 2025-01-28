@@ -47,5 +47,7 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Este aplicativo precisa de acesso à câmera para funcionar como assistente visual.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Este aplicativo precisa de acesso ao microfone para gravar suas perguntas.</string>
 </dict>
 </plist>
