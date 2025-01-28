@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Este aplicativo precisa de acesso à câmera para funcionar como assistente visual.</string>
 </dict>
 </plist>
