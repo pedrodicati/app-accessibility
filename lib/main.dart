@@ -218,6 +218,11 @@ class _CameraScreenState extends State<CameraScreen>
         _audioPath =
             '${tempDir.path}/audio_query_${DateTime.now().millisecondsSinceEpoch}.wav';
 
+        // Feedback sonoro e visual
+        await flutterTts.speak("Gravando sua pergunta");
+        _showFeedback("Gravando...");
+        await Future.delayed(const Duration(milliseconds: 500));
+
         await audioRecorder.startRecorder(
           toFile: _audioPath,
           codec: Codec.pcm16WAV,
@@ -226,10 +231,6 @@ class _CameraScreenState extends State<CameraScreen>
         setState(() {
           _isRecording = true;
         });
-
-        // Feedback sonoro e visual
-        await flutterTts.speak("Gravando sua pergunta");
-        _showFeedback("Gravando...");
       } catch (e) {
         print('Error during capture: $e');
         await flutterTts.speak("Ocorreu um erro ao iniciar a captura");
@@ -266,12 +267,7 @@ class _CameraScreenState extends State<CameraScreen>
 
   Future<void> _sendRequest() async {
     try {
-      // Simulação de API - substituir pela URL real quando disponível
-      await Future.delayed(const Duration(seconds: 6));
-
-      // Exemplo de como será a implementação real
-      /*
-      final uri = Uri.parse('sua_url_api/analyze');
+      final uri = Uri.parse('http://179.191.13.98:3015/api/analyze-image-audio-query');
       var request = http.MultipartRequest('POST', uri);
       
       request.files.addAll([
@@ -282,13 +278,7 @@ class _CameraScreenState extends State<CameraScreen>
       final response = await request.send();
       final responseData = await response.stream.bytesToString();
       final jsonResponse = jsonDecode(responseData);
-      final description = jsonResponse['description'];
-      */
-
-      // Resposta simulada - remover quando a API estiver pronta
-      const description =
-          "Na imagem eu vejo uma sala bem iluminada com uma mesa de madeira e algumas cadeiras. "
-          "Há também uma janela grande que permite a entrada de luz natural.";
+      final description = jsonResponse['image_text'];
 
       await flutterTts.speak(description);
 
