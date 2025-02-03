@@ -85,8 +85,8 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen>
     with WidgetsBindingObserver {
   CameraController? _controller;
-  late FlutterTts flutterTts;
-  late FlutterSoundRecorder audioRecorder;
+  FlutterTts flutterTts = FlutterTts();
+  FlutterSoundRecorder audioRecorder = FlutterSoundRecorder();
   bool _isInitialized = false;
   bool _isRecording = false;
   bool _isProcessing = false;
